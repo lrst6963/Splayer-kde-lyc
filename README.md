@@ -1,6 +1,6 @@
 # SPlayer KDE Desktop Lyric
 
-基于 Qt Quick (C++) 的 SPlayer 桌面歌词显示程序，支持 KDE Plasma。
+基于 Qt Quick (C++) 的 [SPlayer](https://github.com/imsyy/SPlayer) 桌面歌词显示程序，支持 KDE Plasma。
 
 ## 特性
 
@@ -13,11 +13,16 @@
 - ✅ 多种显示模式：
   - 奇偶行模式 (Double Line)
   - 滚动模式 (Scrolling)
+  - 交替模式 (Alternate)
   - 单行模式 (Single Line)
 - ✅ 丰富的自定义选项（通过控制面板）：
   - 字体选择、大小调整
-  - 对齐方式（居左、居中、居右、分离）
+  - 对齐方式（居左、居中、居右、分离）- 智能适配当前模式
   - 行间距调整
+  - 窗口宽度调整
+- ✅ 交互优化：
+  - 控制面板打开时自动居中
+  - 动态隐藏不适用的设置选项
 - ✅ 歌词翻译显示支持
 - ✅ 系统托盘集成（显示/隐藏、锁定窗口、退出）
 
