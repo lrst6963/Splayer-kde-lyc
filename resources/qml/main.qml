@@ -55,6 +55,9 @@ Window {
     property var currentLyricLine: (splayer.lyrics && splayer.currentLineIndex >= 0 && splayer.currentLineIndex < splayer.lyrics.length) 
                                    ? splayer.lyrics[splayer.currentLineIndex] : null
 
+    property var nextLyricLine: (splayer.lyrics && splayer.currentLineIndex >= 0 && (splayer.currentLineIndex + 1) < splayer.lyrics.length)
+                                   ? splayer.lyrics[splayer.currentLineIndex + 1] : null
+
     function calculateWindowHeight() {
         if (root.lyricDisplayMode === "alternate" || root.lyricDisplayMode === "single") {
             return (singleLyric.implicitHeight > 0 ? singleLyric.implicitHeight : 120) + contentPadding
@@ -343,6 +346,7 @@ Window {
             visible: root.lyricDisplayMode === "alternate" || root.lyricDisplayMode === "single"
             
             lyricLine: root.currentLyricLine
+            nextLyricLine: root.nextLyricLine
             transitionMode: root.lyricDisplayMode === "alternate" ? "alternate" : settings.lyricTransition
             lineSpacing: root.lyricLineSpacing
             
@@ -386,6 +390,12 @@ Window {
             spacing: root.scrollLineSpacing
             interactive: false
             highlightRangeMode: ListView.NoHighlightRange
+            
+            onModelChanged: {
+                scrollAnim.stop()
+                currentIndex = -1
+                contentY = 0
+            }
             
             onCurrentIndexChanged: {
                 if (currentIndex !== -1) {
@@ -449,9 +459,14 @@ Window {
 
             Connections {
                 target: splayer
-                function onCurrentLineIndexChanged() {
-                    if (root.lyricDisplayMode === "scroll" && splayer.currentLineIndex >= 0) {
-                        lyricListView.currentIndex = splayer.currentLineIndex
+                function onLyricChanged() {
+                    if (root.lyricDisplayMode === "scroll") {
+                        if (splayer.currentLineIndex >= 0) {
+                            lyricListView.currentIndex = splayer.currentLineIndex
+                        } else {
+                            lyricListView.currentIndex = -1
+                            lyricListView.contentY = 0
+                        }
                     }
                 }
             }

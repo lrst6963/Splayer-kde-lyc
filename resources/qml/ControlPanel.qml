@@ -201,6 +201,9 @@ Window {
                         model: ListModel {
                             ListElement { label: "滑动(Slide)"; value: "slide" }
                             ListElement { label: "淡入淡出(Fade)"; value: "fade" }
+                            ListElement { label: "缩放(Scale)"; value: "scale" }
+                            ListElement { label: "弹跳(Bounce)"; value: "bounce" }
+                            ListElement { label: "翻转(Flip)"; value: "flip" }
                             ListElement { label: "无(None)"; value: "none" }
                         }
                         textRole: "label"

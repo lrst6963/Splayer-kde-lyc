@@ -282,12 +282,18 @@ Item {
 
                     var start = root.wordList[0].startTime
                     var end = root.wordList[root.wordList.length - 1].endTime
-                    var duration = end - start
-                    if (duration <= 0.001) return 0
+                    var lineDuration = end - start
+                    if (lineDuration <= 0.001) return 0
 
-                    var p = (root.currentTime - start) / duration
-                    if (p < 0) p = 0
-                    if (p > 1) p = 1
+                    // 基础速度 50px/s，但不超过歌词行时长
+                    var speedDuration = maxOffset / 50.0
+                    var scrollDuration = Math.min(speedDuration, lineDuration * 0.9)
+                    if (scrollDuration <= 0.001) return -maxOffset
+
+                    var elapsed = root.currentTime - start
+                    if (elapsed < 0) return 0
+                    if (elapsed >= scrollDuration) return -maxOffset
+                    var p = elapsed / scrollDuration
                     return -maxOffset * p
                 }
                 y: (wordClip.height - wordInRow.implicitHeight) / 2

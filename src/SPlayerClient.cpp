@@ -337,6 +337,13 @@ void SPlayerClient::handleSongChange(const QJsonObject &data) {
 
   bool isSongChanged = (newSongName != m_currentSong);
   m_currentSong = newSongName;
+  
+  // 如果歌曲切换了，首先重置时间进度
+  if (isSongChanged) {
+      m_currentTime = 0;
+      m_baseTime = 0;
+      m_baseTimestamp = 0;
+  }
 
   if (data.contains("artist"))
     m_currentArtist = data["artist"].toString();
@@ -553,9 +560,16 @@ void SPlayerClient::handleLyricChange(const QJsonObject &data) {
   }
 
   qDebug() << "Loaded" << m_lyrics.size() << "lyric lines.";
-  qDebug() << "Current time:" << m_currentTime << "seconds";
+  
+  // 切歌或重新加载歌词时，重置所有状态
+  m_currentLineIndex = -1;
+  m_currentLyric = "";
+  m_currentTime = 0;
+  m_baseTime = 0;
+  m_baseTimestamp = 0;
+  emit progressChanged();
+  
   updateCurrentLyricLine();
-  qDebug() << "Current lyric after update:" << m_currentLyric;
   m_lastLyricUpdateTimestamp = QDateTime::currentMSecsSinceEpoch();
   emit lyricChanged();
 }
