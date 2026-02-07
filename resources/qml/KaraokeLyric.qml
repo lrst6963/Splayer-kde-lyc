@@ -3,7 +3,7 @@ import QtQuick 2.15
 Item {
     id: root
 
-    required property var lyricLine
+    property var lyricLine: null
     required property double currentTime
     required property color playedColor
     required property color unplayedColor
@@ -148,12 +148,12 @@ Item {
         updateLrcMarquee()
     }
     onLyricLineChanged: Qt.callLater(function() {
-        syncWordData()
-        updateLrcMarquee()
+        root.syncWordData()
+        root.updateLrcMarquee()
     })
     Component.onCompleted: Qt.callLater(function() {
-        syncWordData()
-        updateLrcMarquee()
+        root.syncWordData()
+        root.updateLrcMarquee()
     })
 
     Item {

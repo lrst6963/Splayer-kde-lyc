@@ -3,5 +3,6 @@
         <file>qml/main.qml</file>
         <file>qml/ControlPanel.qml</file>
         <file>qml/KaraokeLyric.qml</file>
+        <file>qml/TransitionLyric.qml</file>
     </qresource>
 </RCC>

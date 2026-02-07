@@ -29,10 +29,12 @@ Window {
         property int windowX: -1
         property int windowY: -1
         property bool showLyrics: true
+        property int lyricWindowWidth: 1024
+        property string lyricTransition: "slide"
         property alias isLocked: root.isLocked
     }
 
-    width: 1024
+    width: settings.lyricWindowWidth
     property int bottomMargin: 60
     property int contentPadding: 44
     property real scrollLineHeightScale: 1.2
@@ -46,15 +48,18 @@ Window {
     }
 
     function scrollViewportHeight() {
-        if (root.lyricDisplayMode === "single") {
-             return scrollFixedItemHeight()
-        }
         return Math.ceil(scrollFixedItemHeight() * root.scrollLineCount
                          + root.scrollLineSpacing * Math.max(0, root.scrollLineCount - 1))
     }
 
+    property var currentLyricLine: (splayer.lyrics && splayer.currentLineIndex >= 0 && splayer.currentLineIndex < splayer.lyrics.length) 
+                                   ? splayer.lyrics[splayer.currentLineIndex] : null
+
     function calculateWindowHeight() {
-        if (root.lyricDisplayMode === "scroll" || root.lyricDisplayMode === "single") {
+        if (root.lyricDisplayMode === "alternate" || root.lyricDisplayMode === "single") {
+            return (singleLyric.implicitHeight > 0 ? singleLyric.implicitHeight : 120) + contentPadding
+        }
+        if (root.lyricDisplayMode === "scroll") {
              return scrollViewportHeight()
         }
 
@@ -71,7 +76,8 @@ Window {
     readonly property bool hasLyrics: (lyricDisplayMode === "double" && 
                     ((splayer.lyricLineEven && splayer.lyricLineEven.text !== undefined && splayer.lyricLineEven.text !== "")
                     || (splayer.lyricLineOdd && splayer.lyricLineOdd.text !== undefined && splayer.lyricLineOdd.text !== "")))
-                    || ((lyricDisplayMode === "scroll" || lyricDisplayMode === "single") && splayer.lyrics && splayer.lyrics.length > 0)
+                    || ((lyricDisplayMode === "alternate" || lyricDisplayMode === "single") && currentLyricLine)
+                    || (lyricDisplayMode === "scroll" && splayer.lyrics && splayer.lyrics.length > 0)
 
     property bool isLocked: false
     property int lyricFontSize: settings.lyricFontSize
@@ -150,6 +156,29 @@ Window {
 
     color: "transparent"
 
+    // 窗口背景，鼠标悬停时显示
+    Rectangle {
+        id: windowBackground
+        anchors.fill: parent
+        color: "#000000"
+        opacity: 0
+        radius: 8
+        // visible: root.lyricDisplayMode !== "alternate" && root.lyricDisplayMode !== "scroll"
+        
+        states: State {
+            name: "hovered"
+            when: dragArea.containsMouse && !root.isLocked
+            PropertyChanges {
+                target: windowBackground
+                opacity: 0.4
+            }
+        }
+        
+        transitions: Transition {
+            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InOutQuad }
+        }
+    }
+
     Component.onCompleted: {
         splayer.setupTrayIcon()
         
@@ -198,7 +227,8 @@ Window {
         id: dragArea
 
         property point clickPos: Qt.point(0, 0)
-
+        
+        hoverEnabled: true
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: root.isLocked ? Qt.ArrowCursor : Qt.SizeAllCursor
@@ -243,10 +273,11 @@ Window {
                   || (splayer.lyricLineOdd && splayer.lyricLineOdd.text !== undefined && splayer.lyricLineOdd.text !== ""))
 
             // 上行
-            KaraokeLyric {
+            TransitionLyric {
                 id: evenLyric
                 height: Math.max(60, implicitHeight)
                 lyricLine: splayer.lyricLineEven
+                transitionMode: settings.lyricTransition
                 currentTime: splayer.currentTime
                 playedColor: root.playedColor
                 unplayedColor: root.unplayedColor
@@ -272,10 +303,11 @@ Window {
             }
 
             // 下行
-            KaraokeLyric {
+            TransitionLyric {
                 id: oddLyric
                 height: Math.max(60, implicitHeight)
                 lyricLine: splayer.lyricLineOdd
+                transitionMode: settings.lyricTransition
                 currentTime: splayer.currentTime
                 playedColor: root.playedColor
                 unplayedColor: root.unplayedColor
@@ -301,6 +333,46 @@ Window {
             }
         }
 
+        // 单行/交替模式歌词
+        TransitionLyric {
+            id: singleLyric
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            
+            visible: root.lyricDisplayMode === "alternate" || root.lyricDisplayMode === "single"
+            
+            lyricLine: root.currentLyricLine
+            transitionMode: root.lyricDisplayMode === "alternate" ? "alternate" : settings.lyricTransition
+            lineSpacing: root.lyricLineSpacing
+            
+            currentTime: splayer.currentTime
+            playedColor: root.playedColor
+            unplayedColor: root.unplayedColor
+            outlineColor: root.outlineColor
+            fontSize: root.lyricFontSize
+            fontFamily: root.lyricFontFamily
+            
+            property bool isActive: true 
+            opacity: 1.0 
+            
+            marqueeEnabled: true
+            translationEnabled: root.translationEnabled
+            translationFontSize: root.translationFontSize
+            
+            textAlign: {
+                if (root.lyricDisplayMode === "alternate") return root.lyricAlignMode === "split" ? "left" : root.lyricAlignMode;
+                return root.lyricAlignMode === "split" ? "center" : root.lyricAlignMode;
+            }
+            
+            backgroundEnabled: root.backgroundEnabled
+            backgroundColor: root.backgroundColor
+            backgroundRadius: root.backgroundRadius
+
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
+        }
+
         // 滚动歌词
         ListView {
             id: lyricListView
@@ -308,15 +380,35 @@ Window {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             height: root.scrollViewportHeight()
-            visible: root.lyricDisplayMode === "scroll" || root.lyricDisplayMode === "single"
+            visible: root.lyricDisplayMode === "scroll"
             model: splayer.lyrics
             clip: true
-            spacing: root.lyricDisplayMode === "single" ? 0 : root.scrollLineSpacing
+            spacing: root.scrollLineSpacing
             interactive: false
-            preferredHighlightBegin: 0
-            preferredHighlightEnd: root.scrollFixedItemHeight()
-            highlightRangeMode: ListView.StrictlyEnforceRange
-            highlightMoveDuration: 400
+            highlightRangeMode: ListView.NoHighlightRange
+            
+            onCurrentIndexChanged: {
+                if (currentIndex !== -1) {
+                    var itemH = root.scrollFixedItemHeight() + root.scrollLineSpacing
+                    var target = currentIndex * itemH
+                    
+                    if (contentHeight > height) {
+                         if (target > contentHeight - height) target = contentHeight - height
+                    }
+                    if (target < 0) target = 0
+                    
+                    scrollAnim.to = target
+                    scrollAnim.restart()
+                }
+            }
+
+            NumberAnimation {
+                id: scrollAnim
+                target: lyricListView
+                property: "contentY"
+                duration: 500
+                easing.type: Easing.OutQuad
+            }
 
             delegate: Item {
                 width: ListView.view.width
@@ -358,7 +450,7 @@ Window {
             Connections {
                 target: splayer
                 function onCurrentLineIndexChanged() {
-                    if ((root.lyricDisplayMode === "scroll" || root.lyricDisplayMode === "single") && splayer.currentLineIndex >= 0) {
+                    if (root.lyricDisplayMode === "scroll" && splayer.currentLineIndex >= 0) {
                         lyricListView.currentIndex = splayer.currentLineIndex
                     }
                 }

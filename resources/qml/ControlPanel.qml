@@ -10,8 +10,8 @@ Window {
     property var settings
     property var targetWindow
     
-    width: 600
-    height: 600
+    width: 700
+    height: 700
     visibility: Window.Hidden
     title: "控制面板"
     flags: Qt.Window | Qt.WindowStaysOnTopHint
@@ -21,8 +21,8 @@ Window {
 
     onVisibleChanged: {
         if (visible) {
-             x = targetWindow.x + 40
-             y = Math.max(0, targetWindow.y - height - 20)
+            x = (Screen.width - width) / 2
+            y = (Screen.height - height) / 2
         }
     }
 
@@ -33,7 +33,8 @@ Window {
 
     ListModel {
         id: displayModeModel
-        ListElement { label: "奇偶模式(Odd/Even)"; value: "double" }
+        ListElement { label: "交替模式(Alternate)"; value: "alternate" }
+        ListElement { label: "奇偶模式(Double)"; value: "double" }
         ListElement { label: "滚动模式(Scrolling)"; value: "scroll" }
         ListElement { label: "单行模式(Single)"; value: "single" }
     }
@@ -45,6 +46,38 @@ Window {
         ListElement { label: "全部居右"; value: "right" }
         ListElement { label: "全部居中"; value: "center" }
     }
+
+    // 根据模式动态更新对齐选项
+    function updateAlignModel() {
+        var currentAlign = settings.lyricAlignMode
+        alignModeModel.clear()
+        
+        // 只有双行模式（double）支持分离对齐
+        if (settings.lyricDisplayMode === "double") {
+             alignModeModel.append({ label: "分离(上左下右)", value: "split" })
+        }
+        
+        alignModeModel.append({ label: "全部居左", value: "left" })
+        alignModeModel.append({ label: "全部居右", value: "right" })
+        alignModeModel.append({ label: "全部居中", value: "center" })
+
+        // 如果当前是对齐是 split 但新模式不支持，则重置为 center
+        if (currentAlign === "split" && settings.lyricDisplayMode !== "double") {
+             settings.lyricAlignMode = "center"
+        }
+        
+        // 恢复选中项
+        alignCombo.currentIndex = alignIndex(settings.lyricAlignMode)
+    }
+
+    Connections {
+        target: settings
+        function onLyricDisplayModeChanged() {
+            updateAlignModel()
+        }
+    }
+    
+    Component.onCompleted: updateAlignModel()
 
     function displayModeIndex(value) {
         for (var i = 0; i < displayModeModel.count; i++) {
@@ -88,6 +121,29 @@ Window {
                 ColumnLayout {
                     width: controlScroll.availableWidth
                     spacing: 12
+
+                    Controls.Label { text: "窗口宽度"; Layout.fillWidth: true }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Controls.Slider {
+                            from: 400
+                            to: 3840 // 支持 4K
+                            stepSize: 10
+                            value: settings.lyricWindowWidth
+                            onMoved: settings.lyricWindowWidth = Math.round(value)
+                            Layout.fillWidth: true
+                        }
+                        Controls.SpinBox {
+                            from: 400
+                            to: 3840
+                            value: settings.lyricWindowWidth
+                            stepSize: 10
+                            editable: true
+                            onValueModified: settings.lyricWindowWidth = value
+                            Layout.preferredWidth: 96
+                        }
+                    }
 
                     Controls.Label { text: "字体大小"; Layout.fillWidth: true }
                     RowLayout {
@@ -134,9 +190,43 @@ Window {
                         onActivated: settings.lyricDisplayMode = displayModeModel.get(currentIndex).value
                     }
 
-                    Controls.Label { text: "对齐"; Layout.fillWidth: true }
+                    Controls.Label { 
+                        text: "切换动画"
+                        visible: settings.lyricDisplayMode !== "alternate" && settings.lyricDisplayMode !== "scroll"
+                        Layout.fillWidth: true 
+                    }
+                    Controls.ComboBox {
+                        id: transitionCombo
+                        visible: settings.lyricDisplayMode !== "alternate" && settings.lyricDisplayMode !== "scroll"
+                        model: ListModel {
+                            ListElement { label: "滑动(Slide)"; value: "slide" }
+                            ListElement { label: "淡入淡出(Fade)"; value: "fade" }
+                            ListElement { label: "无(None)"; value: "none" }
+                        }
+                        textRole: "label"
+                        Layout.fillWidth: true
+                        
+                        Component.onCompleted: {
+                            for(var i=0; i<model.count; i++) {
+                                if(model.get(i).value === settings.lyricTransition) {
+                                    currentIndex = i
+                                    return
+                                }
+                            }
+                            currentIndex = 0
+                        }
+                        
+                        onActivated: settings.lyricTransition = model.get(currentIndex).value
+                    }
+
+                    Controls.Label { 
+                        text: "对齐" 
+                        visible: settings.lyricDisplayMode !== "alternate"
+                        Layout.fillWidth: true 
+                    }
                     Controls.ComboBox {
                         id: alignCombo
+                        visible: settings.lyricDisplayMode !== "alternate"
                         model: alignModeModel
                         textRole: "label"
                         Layout.fillWidth: true
